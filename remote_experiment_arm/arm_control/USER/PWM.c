@@ -1,218 +1,194 @@
 #include "include.h"
 
+uint16 ServoPwmDuty[8] = { 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500 };    // PWM¿¿¿¿
+uint16 ServoPwmDutySet[8] = { 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500 }; // PWM¿¿¿¿
+float ServoPwmDutyInc[8];                                                       // ¿¿¿¿¿¿¿¿PWM¿¿¿¿¿¿¿¿¿2.5ms¿20ms¿¿¿PWM¿¿
 
-			
-uint16 ServoPwmDuty[8] = {1500,1500,1500,1500,1500,1500,1500,1500};	//PWMÂö³å¿í¶È
-uint16 ServoPwmDutySet[8] = {1500,1500,1500,1500,1500,1500,1500,1500};	//PWMÂö³å¿í¶È
-float  ServoPwmDutyInc[8];		//ÎªÁËËÙ¶È¿ØÖÆ£¬µ±PWMÂö¿í·¢Éú±ä»¯Ê±£¬Ã¿2.5ms»ò20msµÝÔöµÄPWMÂö¿í
+bool ServoPwmDutyHaveChange = FALSE; // ¿¿¿¿¿¿¿¿
 
-bool ServoPwmDutyHaveChange = FALSE;	//Âö¿íÓÐ±ä»¯±êÖ¾Î»
+uint16 ServoTime = 2000; // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
 
-uint16 ServoTime = 2000;			//¶æ»ú´Óµ±Ç°½Ç¶ÈÔË¶¯µ½Ö¸¶¨½Ç¶ÈµÄÊ±¼ä£¬Ò²¾ÍÊÇ¿ØÖÆËÙ¶È
-
-
-void ServoSetPluseAndTime(uint8 id,uint16 p,uint16 time)
+void ServoSetPluseAndTime(uint8 id, uint16 p, uint16 time)
 {
-	if(id >= 0 && id <= 7 && p >= 500 && p <= 2500)
-	{
-		if(time < 20)
-			time = 20;
-		if(time > 30000)
-			time = 30000;
+    if (id >= 0 && id <= 7 && p >= 500 && p <= 2500) {
+        if (time < 20)
+            time = 20;
+        if (time > 30000)
+            time = 30000;
 
-		ServoPwmDutySet[id] = p;
-		ServoTime = time;
-		ServoPwmDutyHaveChange = TRUE;
-	}
+        ServoPwmDutySet[id] = p;
+        ServoTime = time;
+        ServoPwmDutyHaveChange = TRUE;
+    }
 }
 
-
-void ServoPwmDutyCompare(void)//Âö¿í±ä»¯±È½Ï¼°ËÙ¶È¿ØÖÆ
+void ServoPwmDutyCompare(void) // ¿¿¿¿¿¿¿¿¿¿¿
 {
-	uint8 i;
-	
-	static uint16 ServoPwmDutyIncTimes;	//ÐèÒªµÝÔöµÄ´ÎÊý
-	static bool ServoRunning = FALSE;	//¶æ»úÕýÔÚÒÔÖ¸¶¨ËÙ¶ÈÔË¶¯µ½Ö¸¶¨µÄÂö¿í¶ÔÓ¦µÄÎ»ÖÃ
-	if(ServoPwmDutyHaveChange)//Í£Ö¹ÔË¶¯²¢ÇÒÂö¿í·¢Éú±ä»¯Ê±²Å½øÐÐ¼ÆËã      ServoRunning == FALSE && 
-	{
-		ServoPwmDutyHaveChange = FALSE;
-		ServoPwmDutyIncTimes = ServoTime/20;	//µ±Ã¿20msµ÷ÓÃÒ»´ÎServoPwmDutyCompare()º¯ÊýÊ±ÓÃ´Ë¾ä
-		for(i=0;i<8;i++)
-		{
-			//if(ServoPwmDuty[i] != ServoPwmDutySet[i])
-			{
-				if(ServoPwmDutySet[i] > ServoPwmDuty[i])
-				{
-					ServoPwmDutyInc[i] = ServoPwmDutySet[i] - ServoPwmDuty[i];
-					ServoPwmDutyInc[i] = -ServoPwmDutyInc[i];
-				}
-				else
-				{
-					ServoPwmDutyInc[i] = ServoPwmDuty[i] - ServoPwmDutySet[i];
-					
-				}
-				ServoPwmDutyInc[i] /= ServoPwmDutyIncTimes;//Ã¿´ÎµÝÔöµÄÂö¿í
-			}
-		}
-		ServoRunning = TRUE;	//¶æ»ú¿ªÊ¼¶¯×÷
-	}
-	if(ServoRunning)
-	{
-		ServoPwmDutyIncTimes--;
-		for(i=0;i<8;i++)
-		{
-			if(ServoPwmDutyIncTimes == 0)
-			{		//×îºóÒ»´ÎµÝÔö¾ÍÖ±½Ó½«Éè¶¨Öµ¸³¸øµ±Ç°Öµ
+    uint8 i;
 
-				ServoPwmDuty[i] = ServoPwmDutySet[i];
+    static uint16 ServoPwmDutyIncTimes; // ¿¿¿¿¿¿¿
+    static bool ServoRunning = FALSE;   // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+    if (ServoPwmDutyHaveChange)         // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿      ServoRunning == FALSE &&
+    {
+        ServoPwmDutyHaveChange = FALSE;
+        ServoPwmDutyIncTimes = ServoTime / 20; // ¿¿20ms¿¿¿¿ServoPwmDutyCompare()¿¿¿¿¿¿
+        for (i = 0; i < 8; i++) {
+            // if(ServoPwmDuty[i] != ServoPwmDutySet[i])
+            {
+                if (ServoPwmDutySet[i] > ServoPwmDuty[i]) {
+                    ServoPwmDutyInc[i] = ServoPwmDutySet[i] - ServoPwmDuty[i];
+                    ServoPwmDutyInc[i] = -ServoPwmDutyInc[i];
+                } else {
+                    ServoPwmDutyInc[i] = ServoPwmDuty[i] - ServoPwmDutySet[i];
+                }
+                ServoPwmDutyInc[i] /= ServoPwmDutyIncTimes; // ¿¿¿¿¿¿¿
+            }
+        }
+        ServoRunning = TRUE; // ¿¿¿¿¿¿
+    }
+    if (ServoRunning) {
+        ServoPwmDutyIncTimes--;
+        for (i = 0; i < 8; i++) {
+            if (ServoPwmDutyIncTimes == 0) { // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
 
-				ServoRunning = FALSE;	//µ½´ïÉè¶¨Î»ÖÃ£¬¶æ»úÍ£Ö¹ÔË¶¯
-			}
-			else
-			{
+                ServoPwmDuty[i] = ServoPwmDutySet[i];
 
-				ServoPwmDuty[i] = ServoPwmDutySet[i] + 
-					(signed short int)(ServoPwmDutyInc[i] * ServoPwmDutyIncTimes);
+                ServoRunning = FALSE; // ¿¿¿¿¿¿¿¿¿¿¿¿¿
+            } else {
 
-			}
-		}
-		
-	}
+                ServoPwmDuty[i] = ServoPwmDutySet[i] + (signed short int)(ServoPwmDutyInc[i] * ServoPwmDutyIncTimes);
+            }
+        }
+    }
 }
-
-
 
 void InitTimer3(void)
 {
-	NVIC_InitTypeDef NVIC_InitStructure;
-	
-	RCC->APB1ENR|=1<<1;//TIM3Ê±ÖÓÊ¹ÄÜ
- 	TIM3->ARR=10000 - 1;  //Éè¶¨¼ÆÊýÆ÷×Ô¶¯ÖØ×°Öµ//¸ÕºÃ1ms    
-	TIM3->PSC=72 - 1;  //Ô¤·ÖÆµÆ÷72,µÃµ½1MhzµÄ¼ÆÊýÊ±ÖÓ
-	//ÕâÁ½¸ö¶«¶«ÒªÍ¬Ê±ÉèÖÃ²Å¿ÉÒÔÊ¹ÓÃÖÐ¶Ï
-	TIM3->DIER|=1<<0;   //ÔÊÐí¸üÐÂÖÐ¶Ï				
-//	TIM3->DIER|=1<<6;   //ÔÊÐí´¥·¢ÖÐ¶Ï	   
-	TIM3->CR1|=0x01;    //Ê¹ÄÜ¶¨Ê±Æ÷3
-	
-	NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;  //TIM3ÖÐ¶Ï
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;  //ÏÈÕ¼ÓÅÏÈ¼¶3¼¶
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;	//´ÓÓÅÏÈ¼¶3¼¶
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; //IRQÍ¨µÀ±»Ê¹ÄÜ
-	NVIC_Init(&NVIC_InitStructure);  //¸ù¾ÝNVIC_InitStructÖÐÖ¸¶¨µÄ²ÎÊý³õÊ¼»¯ÍâÉèNVIC¼Ä´æÆ÷
-}
+    NVIC_InitTypeDef NVIC_InitStructure;
 
+    RCC->APB1ENR |= 1 << 1; // TIM3¿¿¿¿
+    TIM3->ARR = 10000 - 1;  // ¿¿¿¿¿¿¿¿¿¿//¿¿1ms
+    TIM3->PSC = 72 - 1;     // ¿¿¿¿72,¿¿1Mhz¿¿¿¿¿
+    // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+    TIM3->DIER |= 1 << 0; // ¿¿¿¿¿¿
+    //	TIM3->DIER|=1<<6;   //¿¿¿¿¿¿
+    TIM3->CR1 |= 0x01; // ¿¿¿¿¿3
+
+    NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;           // TIM3¿¿
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0; // ¿¿¿¿¿3¿
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;        // ¿¿¿¿3¿
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;           // IRQ¿¿¿¿¿
+    NVIC_Init(&NVIC_InitStructure);                           // ¿¿NVIC_InitStruct¿¿¿¿¿¿¿¿¿¿¿NVIC¿¿¿
+}
 
 void InitPWM(void)
 {
-	GPIO_InitTypeDef  GPIO_InitStructure;
-	
-	InitTimer3();
-	
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_8;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;		 //ÍÆÍìÊä³ö
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
+    GPIO_InitTypeDef GPIO_InitStructure;
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10| GPIO_Pin_11 | GPIO_Pin_12;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;		 //ÍÆÍìÊä³ö
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
-	
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;		 //ÍÆÍìÊä³ö
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOD, &GPIO_InitStructure);
+    InitTimer3();
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_8;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; // ¿¿¿¿
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; // ¿¿¿¿
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; // ¿¿¿¿
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOD, &GPIO_InitStructure);
 }
 
-//½«PWMÂö¿í×ª»¯³É×Ô¶¯×°ÔØ¼Ä´æÆ÷µÄÖµ
-void Timer3ARRValue(uint16 pwm)	
+// ¿PWM¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+void Timer3ARRValue(uint16 pwm)
 {
-	TIM3->ARR = pwm + 1;
+    TIM3->ARR = pwm + 1;
 }
 
-
-//¶¨Ê±Æ÷3ÖÐ¶Ï·þÎñ³ÌÐò	 
+// ¿¿¿3¿¿¿¿¿¿
 void TIM3_IRQHandler(void)
-{ 		
-	static uint16 i = 1;
-	
-	if(TIM3->SR&0X0001)//Òç³öÖÐ¶Ï
-	{
-		switch(i)
-		{
-			case 1:
-// 				SERVO0 = 1;	//PWM¿ØÖÆ½Å¸ßµçÆ½
-				//¸ø¶¨Ê±Æ÷0¸³Öµ£¬¼ÆÊýPwm0Duty¸öÂö³åºó²úÉúÖÐ¶Ï£¬ÏÂ´ÎÖÐ¶Ï»á½øÈëÏÂÒ»¸öcaseÓï¾ä
-				Timer3ARRValue(ServoPwmDuty[0]);
-				break;
-			case 2:
-// 				SERVO0 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				//´Ë¼ÆÊýÆ÷¸³Öµ²úÉúµÄÖÐ¶Ï±íÊ¾ÏÂÒ»¸öµ¥ÔªÒª½øÐÐÈÎÎñµÄ¿ªÊ¼
-				Timer3ARRValue(2500-ServoPwmDuty[0]);	
-				break;
-			case 3:
-				SERVO1 = 1;	
-				Timer3ARRValue(ServoPwmDuty[1]);
-				break;
-			case 4:
-				SERVO1 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[1]);	
-				break;
-			case 5:
-				SERVO2 = 1;	
-				Timer3ARRValue(ServoPwmDuty[2]);
-				break;
-			case 6:
-				SERVO2 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[2]);	
-				break;	
-			case 7:
-				SERVO3 = 1;	
-				Timer3ARRValue(ServoPwmDuty[3]);
-				break;
-			case 8:
-				SERVO3 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[3]);	
-				break;	
-			case 9:
-				SERVO4 = 1;	
-				Timer3ARRValue(ServoPwmDuty[4]);
-				break;
-			case 10:
-				SERVO4 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[4]);	
-				break;	
-			case 11:
-				SERVO5 = 1;	
-				Timer3ARRValue(ServoPwmDuty[5]);
-				break;
-			case 12:
-				SERVO5 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[5]);	
-				break;
-			case 13:
-				SERVO6 = 1;	
-				Timer3ARRValue(ServoPwmDuty[6]);
-				break;
-			case 14:
-				SERVO6 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[6]);	
-				break;
-			case 15:
-// 				SERVO7 = 1;	
-				Timer3ARRValue(ServoPwmDuty[7]);
-				break;
-			case 16:
-// 				SERVO7 = 0;	//PWM¿ØÖÆ½ÅµÍµçÆ½
-				Timer3ARRValue(2500-ServoPwmDuty[7]);
-				i = 0;	
-				break;				 
-		}
-		i++;
-	}				   
-	TIM3->SR&=~(1<<0);//Çå³ýÖÐ¶Ï±êÖ¾Î» 	    
-}
+{
+    static uint16 i = 1;
 
+    if (TIM3->SR & 0X0001) // ¿¿¿¿
+    {
+        switch (i) {
+        case 1:
+            // 				SERVO0 = 1;	//PWM¿¿¿¿¿¿
+            // ¿¿¿¿0¿¿¿¿¿Pwm0Duty¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿case¿¿
+            Timer3ARRValue(ServoPwmDuty[0]);
+            break;
+        case 2:
+            // 				SERVO0 = 0;	//PWM¿¿¿¿¿¿
+            // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[0]);
+            break;
+        case 3:
+            SERVO1 = 1;
+            Timer3ARRValue(ServoPwmDuty[1]);
+            break;
+        case 4:
+            SERVO1 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[1]);
+            break;
+        case 5:
+            SERVO2 = 1;
+            Timer3ARRValue(ServoPwmDuty[2]);
+            break;
+        case 6:
+            SERVO2 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[2]);
+            break;
+        case 7:
+            SERVO3 = 1;
+            Timer3ARRValue(ServoPwmDuty[3]);
+            break;
+        case 8:
+            SERVO3 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[3]);
+            break;
+        case 9:
+            SERVO4 = 1;
+            Timer3ARRValue(ServoPwmDuty[4]);
+            break;
+        case 10:
+            SERVO4 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[4]);
+            break;
+        case 11:
+            SERVO5 = 1;
+            Timer3ARRValue(ServoPwmDuty[5]);
+            break;
+        case 12:
+            SERVO5 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[5]);
+            break;
+        case 13:
+            SERVO6 = 1;
+            Timer3ARRValue(ServoPwmDuty[6]);
+            break;
+        case 14:
+            SERVO6 = 0; // PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[6]);
+            break;
+        case 15:
+            // 				SERVO7 = 1;
+            Timer3ARRValue(ServoPwmDuty[7]);
+            break;
+        case 16:
+            // 				SERVO7 = 0;	//PWM¿¿¿¿¿¿
+            Timer3ARRValue(2500 - ServoPwmDuty[7]);
+            i = 0;
+            break;
+        }
+        i++;
+    }
+    TIM3->SR &= ~(1 << 0); // ¿¿¿¿¿¿¿
+}

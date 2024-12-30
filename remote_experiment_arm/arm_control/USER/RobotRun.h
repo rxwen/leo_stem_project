@@ -1,15 +1,8 @@
 #ifndef _ROBOT_RUN_H_
 #define _ROBOT_RUN_H_
 
-
-
-
 void TaskRobotRun(void);
-void FullActRun(uint8 actFullnum,uint32 times);//初始化并运行新的动作
+void FullActRun(uint8 actFullnum, uint32 times); // 靠靠靠靠靠
 void FullActStop(void);
 
-
-
-
 #endif
-

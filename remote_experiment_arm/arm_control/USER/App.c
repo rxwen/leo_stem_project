@@ -1,701 +1,617 @@
 #include "include.h"
-//×÷Õß:ÉîÛÚÊÐÀÖ»ÃË÷¶û¿Æ¼¼ÓÐÏÞ¹«Ë¾
-//ÎÒÃÇµÄµêÆÌ:lobot-zone.taobao.com
-
-
-
-#define ADC_BAT		13		//µç³ØµçÑ¹µÄAD¼ì²âÍ¨µÀ
+#define ADC_BAT 13 // ¿¿¿¿¿AD¿¿¿¿
 // static bool UartBusy = FALSE;
 
-u32 gSystemTickCount = 0;	//ÏµÍ³´ÓÆô¶¯µ½ÏÖÔÚµÄºÁÃëÊý
+u32 gSystemTickCount = 0; // ¿¿¿¿¿¿¿¿¿¿¿¿
 
 uint8 BuzzerState = 0;
 uint16 Ps2TimeCount = 0;
 
 uint16 BatteryVoltage;
 
-static u8  fac_us=0;//usÑÓÊ±±¶³ËÊý
-static u16 fac_ms=0;//msÑÓÊ±±¶³ËÊý
-//³õÊ¼»¯ÑÓ³Ùº¯Êý
-//SYSTICKµÄÊ±ÖÓ¹Ì¶¨ÎªHCLKÊ±ÖÓµÄ1/8
-//SYSCLK:ÏµÍ³Ê±ÖÓ
+static u8 fac_us = 0;  // us¿¿¿¿¿
+static u16 fac_ms = 0; // ms¿¿¿¿¿
+// ¿¿¿¿¿¿¿
+// SYSTICK¿¿¿¿¿¿HCLK¿¿¿1/8
+// SYSCLK:¿¿¿¿
 void InitDelay(u8 SYSCLK)
 {
-//	SysTick->CTRL&=0xfffffffb;//bit2Çå¿Õ,Ñ¡ÔñÍâ²¿Ê±ÖÓ  HCLK/8
-	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8);	//Ñ¡ÔñÍâ²¿Ê±ÖÓ  HCLK/8
-	fac_us=SYSCLK/8;
-	fac_ms=(u16)fac_us*1000;
+    //	SysTick->CTRL&=0xfffffffb;//bit2¿¿,¿¿¿¿¿¿  HCLK/8
+    SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8); // ¿¿¿¿¿¿  HCLK/8
+    fac_us = SYSCLK / 8;
+    fac_ms = (u16)fac_us * 1000;
 }
-//ÑÓÊ±nms
-//×¢ÒânmsµÄ·¶Î§
-//SysTick->LOADÎª24Î»¼Ä´æÆ÷,ËùÒÔ,×î´óÑÓÊ±Îª:
-//nms<=0xffffff*8*1000/SYSCLK
-//SYSCLKµ¥Î»ÎªHz,nmsµ¥Î»Îªms
-//¶Ô72MÌõ¼þÏÂ,nms<=1864
+// ¿¿nms
+// ¿¿nms¿¿¿
+// SysTick->LOAD¿24¿¿¿¿,¿¿,¿¿¿¿¿:
+// nms<=0xffffff*8*1000/SYSCLK
+// SYSCLK¿¿¿Hz,nms¿¿¿ms
+// ¿72M¿¿¿,nms<=1864
 void DelayMs(u16 nms)
 {
-	u32 temp;
-	SysTick->LOAD=(u32)nms*fac_ms;//Ê±¼ä¼ÓÔØ(SysTick->LOADÎª24bit)
-	SysTick->VAL =0x00;           //Çå¿Õ¼ÆÊýÆ÷
-	SysTick->CTRL=0x01 ;          //¿ªÊ¼µ¹Êý
-	do
-	{
-		temp=SysTick->CTRL;
-	}
-	while(temp&0x01&&!(temp&(1<<16)));//µÈ´ýÊ±¼äµ½´ï
-	SysTick->CTRL=0x00;       //¹Ø±Õ¼ÆÊýÆ÷
-	SysTick->VAL =0X00;       //Çå¿Õ¼ÆÊýÆ÷
+    u32 temp;
+    SysTick->LOAD = (u32)nms * fac_ms; // ¿¿¿¿(SysTick->LOAD¿24bit)
+    SysTick->VAL = 0x00;               // ¿¿¿¿¿
+    SysTick->CTRL = 0x01;              // ¿¿¿¿
+    do {
+        temp = SysTick->CTRL;
+    } while (temp & 0x01 && !(temp & (1 << 16))); // ¿¿¿¿¿¿
+    SysTick->CTRL = 0x00; // ¿¿¿¿¿
+    SysTick->VAL = 0X00;  // ¿¿¿¿¿
 }
-//ÑÓÊ±nus
-//nusÎªÒªÑÓÊ±µÄusÊý.
+// ¿¿nus
+// nus¿¿¿¿¿us¿.
 void DelayUs(u32 nus)
 {
-	u32 temp;
-	SysTick->LOAD=nus*fac_us; //Ê±¼ä¼ÓÔØ
-	SysTick->VAL=0x00;        //Çå¿Õ¼ÆÊýÆ÷
-	SysTick->CTRL=0x01 ;      //¿ªÊ¼µ¹Êý
-	do
-	{
-		temp=SysTick->CTRL;
-	}
-	while(temp&0x01&&!(temp&(1<<16)));//µÈ´ýÊ±¼äµ½´ï
-	SysTick->CTRL=0x00;       //¹Ø±Õ¼ÆÊýÆ÷
-	SysTick->VAL =0X00;       //Çå¿Õ¼ÆÊýÆ÷
+    u32 temp;
+    SysTick->LOAD = nus * fac_us; // ¿¿¿¿
+    SysTick->VAL = 0x00;          // ¿¿¿¿¿
+    SysTick->CTRL = 0x01;         // ¿¿¿¿
+    do {
+        temp = SysTick->CTRL;
+    } while (temp & 0x01 && !(temp & (1 << 16))); // ¿¿¿¿¿¿
+    SysTick->CTRL = 0x00; // ¿¿¿¿¿
+    SysTick->VAL = 0X00;  // ¿¿¿¿¿
 }
-
-
-
-
 
 void InitLED(void)
 {
 
-	GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitTypeDef GPIO_InitStructure;
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);	 //Ê¹ÄÜPA¶Ë¿ÚÊ±ÖÓ
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;				 //LED0-->PC.2 ¶Ë¿ÚÅäÖÃ
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //ÍÆÍìÊä³ö
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE); // ¿¿PA¿¿¿¿
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;             // LED0-->PC.2 ¿¿¿¿
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;      // ¿¿¿¿
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
 }
 
 void InitKey(void)
 {
 
-	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC,ENABLE);
-	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_0;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+    GPIO_InitTypeDef GPIO_InitStructure;
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 
 void InitBuzzer(void)
 {
 
-	GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitTypeDef GPIO_InitStructure;
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);	 //Ê¹ÄÜ¶Ë¿ÚÊ±ÖÓ
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE); // ¿¿¿¿¿¿
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;				 
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //ÍÆÍìÊä³ö
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
-
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; // ¿¿¿¿
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 
-void InitTimer2(void)		//100us
+void InitTimer2(void) // 100us
 {
-	NVIC_InitTypeDef NVIC_InitStructure;
-	
-	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE); //Ê±ÖÓÊ¹ÄÜ
+    NVIC_InitTypeDef NVIC_InitStructure;
 
-	TIM_TimeBaseStructure.TIM_Period = (10 - 1); //ÉèÖÃÔÚÏÂÒ»¸ö¸üÐÂÊÂ¼þ×°Èë»î¶¯µÄ×Ô¶¯ÖØ×°ÔØ¼Ä´æÆ÷ÖÜÆÚµÄÖµ
-	TIM_TimeBaseStructure.TIM_Prescaler =(720-1); //ÉèÖÃÓÃÀ´×÷ÎªTIMxÊ±ÖÓÆµÂÊ³ýÊýµÄÔ¤·ÖÆµÖµ
-	TIM_TimeBaseStructure.TIM_ClockDivision = 0; //ÉèÖÃÊ±ÖÓ·Ö¸î:TDTS = Tck_tim
-	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;  //TIMÏòÉÏ¼ÆÊýÄ£Ê½
-	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure); //¸ù¾ÝTIM_TimeBaseInitStructÖÐÖ¸¶¨µÄ²ÎÊý³õÊ¼»¯TIMxµÄÊ±¼ä»ùÊýµ¥Î»
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE); // ¿¿¿¿
 
-	TIM_ITConfig(  //Ê¹ÄÜ»òÕßÊ§ÄÜÖ¸¶¨µÄTIMÖÐ¶Ï
-	    TIM2, //TIM2
-	    TIM_IT_Update  |  //TIM ÖÐ¶ÏÔ´
-	    TIM_IT_Trigger,   //TIM ´¥·¢ÖÐ¶ÏÔ´
-	    ENABLE  //Ê¹ÄÜ
-	);
+    TIM_TimeBaseStructure.TIM_Period = (10 - 1);                // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+    TIM_TimeBaseStructure.TIM_Prescaler = (720 - 1);            // ¿¿¿¿¿¿TIMx¿¿¿¿¿¿¿¿¿¿¿
+    TIM_TimeBaseStructure.TIM_ClockDivision = 0;                // ¿¿¿¿¿¿:TDTS = Tck_tim
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up; // TIM¿¿¿¿¿¿
+    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);             // ¿¿TIM_TimeBaseInitStruct¿¿¿¿¿¿¿¿¿TIMx¿¿¿¿¿¿¿
 
-	TIM_Cmd(TIM2, ENABLE);  //Ê¹ÄÜTIMxÍâÉè
-	
-	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;  //TIM2ÖÐ¶Ï
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;  //ÏÈÕ¼ÓÅÏÈ¼¶0¼¶
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;	//´ÓÓÅÏÈ¼¶3¼¶
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; //IRQÍ¨µÀ±»Ê¹ÄÜ
-	NVIC_Init(&NVIC_InitStructure);  //¸ù¾ÝNVIC_InitStructÖÐÖ¸¶¨µÄ²ÎÊý³õÊ¼»¯ÍâÉèNVIC¼Ä´æÆ÷
+    TIM_ITConfig(           // ¿¿¿¿¿¿¿¿¿TIM¿¿
+        TIM2,               // TIM2
+        TIM_IT_Update |     // TIM ¿¿¿
+            TIM_IT_Trigger, // TIM ¿¿¿¿¿
+        ENABLE              // ¿¿
+    );
+
+    TIM_Cmd(TIM2, ENABLE); // ¿¿TIMx¿¿
+
+    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;           // TIM2¿¿
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2; // ¿¿¿¿¿0¿
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;        // ¿¿¿¿3¿
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;           // IRQ¿¿¿¿¿
+    NVIC_Init(&NVIC_InitStructure);                           // ¿¿NVIC_InitStruct¿¿¿¿¿¿¿¿¿¿¿NVIC¿¿¿
 }
 
 void InitADC(void)
 {
-	ADC_InitTypeDef ADC_InitStructure;
-	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC |RCC_APB2Periph_ADC1	, ENABLE);	   //Ê¹ÄÜADC1Í¨µÀÊ±ÖÓ
+    ADC_InitTypeDef ADC_InitStructure;
+    GPIO_InitTypeDef GPIO_InitStructure;
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_ADC1, ENABLE); // ¿¿ADC1¿¿¿¿
 
-	RCC_ADCCLKConfig(RCC_PCLK2_Div6);   //72M/6=12,ADC×î´óÊ±¼ä²»ÄÜ³¬¹ý14M
-	//PA0/1/2/3 ×÷ÎªÄ£ÄâÍ¨µÀÊäÈëÒý½Å
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;//|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;		//Ä£ÄâÊäÈëÒý½Å
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+    RCC_ADCCLKConfig(RCC_PCLK2_Div6); // 72M/6=12,ADC¿¿¿¿¿¿¿¿14M
+    // PA0/1/2/3 ¿¿¿¿¿¿¿¿¿¿
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;     //|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN; // ¿¿¿¿¿¿
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	ADC_DeInit(ADC1);  //½«ÍâÉè ADC1 µÄÈ«²¿¼Ä´æÆ÷ÖØÉèÎªÈ±Ê¡Öµ
+    ADC_DeInit(ADC1); // ¿¿¿ ADC1 ¿¿¿¿¿¿¿¿¿¿¿¿
 
-	ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;	//ADC¹¤×÷Ä£Ê½:ADC1ºÍADC2¹¤×÷ÔÚ¶ÀÁ¢Ä£Ê½
-	ADC_InitStructure.ADC_ScanConvMode = DISABLE;	//Ä£Êý×ª»»¹¤×÷ÔÚµ¥Í¨µÀÄ£Ê½
-	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;	//Ä£Êý×ª»»¹¤×÷ÔÚµ¥´Î×ª»»Ä£Ê½
-	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	//×ª»»ÓÉÈí¼þ¶ø²»ÊÇÍâ²¿´¥·¢Æô¶¯
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;	//ADCÊý¾ÝÓÒ¶ÔÆë
-	ADC_InitStructure.ADC_NbrOfChannel = 1;	//Ë³Ðò½øÐÐ¹æÔò×ª»»µÄADCÍ¨µÀµÄÊýÄ¿
-	ADC_Init(ADC1, &ADC_InitStructure);	//¸ù¾ÝADC_InitStructÖÐÖ¸¶¨µÄ²ÎÊý³õÊ¼»¯ÍâÉèADCxµÄ¼Ä´æÆ÷
+    ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;                  // ADC¿¿¿¿:ADC1¿ADC2¿¿¿¿¿¿¿
+    ADC_InitStructure.ADC_ScanConvMode = DISABLE;                       // ¿¿¿¿¿¿¿¿¿¿¿¿
+    ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;                 // ¿¿¿¿¿¿¿¿¿¿¿¿¿
+    ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None; // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+    ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;              // ADC¿¿¿¿¿
+    ADC_InitStructure.ADC_NbrOfChannel = 1;                             // ¿¿¿¿¿¿¿¿¿ADC¿¿¿¿¿
+    ADC_Init(ADC1, &ADC_InitStructure);                                 // ¿¿ADC_InitStruct¿¿¿¿¿¿¿¿¿¿¿ADCx¿¿¿¿
 
+    ADC_Cmd(ADC1, ENABLE); // ¿¿¿¿¿ADC1
 
+    ADC_ResetCalibration(ADC1); // ¿¿¿¿¿ADC1¿¿¿¿¿¿
 
-	ADC_Cmd(ADC1, ENABLE);	//Ê¹ÄÜÖ¸¶¨µÄADC1
+    while (ADC_GetResetCalibrationStatus(ADC1))
+        ; // ¿¿ADC1¿¿¿¿¿¿¿¿¿¿,¿¿¿¿¿¿¿
 
-	ADC_ResetCalibration(ADC1);	//ÖØÖÃÖ¸¶¨µÄADC1µÄÐ£×¼¼Ä´æÆ÷
+    ADC_StartCalibration(ADC1); // ¿¿¿¿ADC1¿¿¿¿¿
 
-	while(ADC_GetResetCalibrationStatus(ADC1));	//»ñÈ¡ADC1ÖØÖÃÐ£×¼¼Ä´æÆ÷µÄ×´Ì¬,ÉèÖÃ×´Ì¬ÔòµÈ´ý
+    while (ADC_GetCalibrationStatus(ADC1))
+        ; // ¿¿¿¿ADC1¿¿¿¿¿,¿¿¿¿¿¿¿
 
-	ADC_StartCalibration(ADC1);		//¿ªÊ¼Ö¸¶¨ADC1µÄÐ£×¼×´Ì¬
-
-	while(ADC_GetCalibrationStatus(ADC1));		//»ñÈ¡Ö¸¶¨ADC1µÄÐ£×¼³ÌÐò,ÉèÖÃ×´Ì¬ÔòµÈ´ý
-
-	ADC_SoftwareStartConvCmd(ADC1, ENABLE);		//Ê¹ÄÜÖ¸¶¨µÄADC1µÄÈí¼þ×ª»»Æô¶¯¹¦ÄÜ
+    ADC_SoftwareStartConvCmd(ADC1, ENABLE); // ¿¿¿¿¿ADC1¿¿¿¿¿¿¿¿¿
 }
-
 
 uint16 GetADCResult(BYTE ch)
 {
-	//ÉèÖÃÖ¸¶¨ADCµÄ¹æÔò×éÍ¨µÀ£¬ÉèÖÃËüÃÇµÄ×ª»¯Ë³ÐòºÍ²ÉÑùÊ±¼ä
-	ADC_RegularChannelConfig(ADC1, ch, 1, ADC_SampleTime_239Cycles5);	//ADC1,ADCÍ¨µÀ3,¹æÔò²ÉÑùË³ÐòÖµÎª1,²ÉÑùÊ±¼äÎª239.5ÖÜÆÚ
+    // ¿¿¿¿ADC¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+    ADC_RegularChannelConfig(ADC1, ch, 1, ADC_SampleTime_239Cycles5); // ADC1,ADC¿¿3,¿¿¿¿¿¿¿¿1,¿¿¿¿¿239.5¿¿
 
-	ADC_SoftwareStartConvCmd(ADC1, ENABLE);		//Ê¹ÄÜÖ¸¶¨µÄADC1µÄÈí¼þ×ª»»Æô¶¯¹¦ÄÜ
+    ADC_SoftwareStartConvCmd(ADC1, ENABLE); // ¿¿¿¿¿ADC1¿¿¿¿¿¿¿¿¿
 
-	while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC)); //µÈ´ý×ª»»½áÊø
+    while (!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC))
+        ; // ¿¿¿¿¿¿
 
-	return ADC_GetConversionValue(ADC1);	//·µ»Ø×î½üÒ»´ÎADC1¹æÔò×éµÄ×ª»»½á¹û
+    return ADC_GetConversionValue(ADC1); // ¿¿¿¿¿¿ADC1¿¿¿¿¿¿¿¿
 }
-
 
 void CheckBatteryVoltage(void)
 {
-	uint8 i;
-	uint32 v = 0;
-	for(i = 0;i < 8;i++)
-	{
-		v += GetADCResult(ADC_BAT);
-	}
-	v >>= 3;
-	
-	v = v * 2475 / 1024;//adc / 4096 * 3300 * 3(3´ú±í·Å´ó3±¶£¬ÒòÎª²É¼¯µçÑ¹Ê±µç×è·ÖÑ¹ÁË)
-	BatteryVoltage = v;
+    uint8 i;
+    uint32 v = 0;
+    for (i = 0; i < 8; i++) {
+        v += GetADCResult(ADC_BAT);
+    }
+    v >>= 3;
 
+    v = v * 2475 / 1024; // adc / 4096 * 3300 * 3(3¿¿¿¿3¿¿¿¿¿¿¿¿¿¿¿¿¿¿)
+    BatteryVoltage = v;
 }
 
 uint16 GetBatteryVoltage(void)
-{//µçÑ¹ºÁ·ü
-	return BatteryVoltage;
+{ // ¿¿¿¿
+    return BatteryVoltage;
 }
 
 void Buzzer(void)
-{//·Åµ½100usµÄ¶¨Ê±ÖÐ¶ÏÀïÃæ
-	static bool fBuzzer = FALSE;
-	static uint32 t1 = 0;
-	static uint32 t2 = 0;
-	if(fBuzzer)
-	{
-		if(++t1 >= 2)
-		{
-			t1 = 0;
-			BUZZER = !BUZZER;//2.5KHz
-		}
-	}
-	else
-	{
-		BUZZER = 0;
-	}
+{ // ¿¿100us¿¿¿¿¿¿¿
+    static bool fBuzzer = FALSE;
+    static uint32 t1 = 0;
+    static uint32 t2 = 0;
+    if (fBuzzer) {
+        if (++t1 >= 2) {
+            t1 = 0;
+            BUZZER = !BUZZER; // 2.5KHz
+        }
+    } else {
+        BUZZER = 0;
+    }
 
-	
-	if(BuzzerState == 0)
-	{
-		fBuzzer = FALSE;
-		t2 = 0;
-	}
-	else if(BuzzerState == 1)
-	{
-		t2++;
-		if(t2 < 5000)
-		{
-			fBuzzer = TRUE;
-		}
-		else if(t2 < 10000)
-		{
-			fBuzzer = FALSE;
-		}
-		else
-		{
-			t2 = 0;
-		}
-	}
+    if (BuzzerState == 0) {
+        fBuzzer = FALSE;
+        t2 = 0;
+    } else if (BuzzerState == 1) {
+        t2++;
+        if (t2 < 5000) {
+            fBuzzer = TRUE;
+        } else if (t2 < 10000) {
+            fBuzzer = FALSE;
+        } else {
+            t2 = 0;
+        }
+    }
 }
 
 BOOL manual = FALSE;
-void TIM2_IRQHandler(void)   //TIM2ÖÐ¶Ï
-{//¶¨Ê±Æ÷2ÖÐ¶Ï  100us
-	static uint32 time = 0;
-	static uint16 timeBattery = 0;
-	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)  //¼ì²éÖ¸¶¨µÄTIMÖÐ¶Ï·¢ÉúÓë·ñ:TIM ÖÐ¶ÏÔ´
-	{
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);    //Çå³ýTIMxµÄÖÐ¶Ï´ý´¦ÀíÎ»:TIM ÖÐ¶ÏÔ´
-		
-		
-		Buzzer();
-		if(++time >= 10)
-		{
-			time = 0;
-			gSystemTickCount++;
-			Ps2TimeCount++;
-			if(GetBatteryVoltage() < 6400)//Ð¡ÓÚ6.4V±¨¾¯
-			{
-				timeBattery++;
-				if(timeBattery > 5000)//³ÖÐø5Ãë
-				{
-					BuzzerState = 1;
-				}
-			}
-			else
-			{
-				timeBattery = 0;
-				if(manual == FALSE)
-				{
-					BuzzerState = 0;
-				}
-			}
-		}
-	}
+void TIM2_IRQHandler(void) // TIM2¿¿
+{                          // ¿¿¿2¿¿  100us
+    static uint32 time = 0;
+    static uint16 timeBattery = 0;
+    if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) // ¿¿¿¿¿TIM¿¿¿¿¿¿:TIM ¿¿¿
+    {
+        TIM_ClearITPendingBit(TIM2, TIM_IT_Update); // ¿¿TIMx¿¿¿¿¿¿¿:TIM ¿¿¿
+
+        Buzzer();
+        if (++time >= 10) {
+            time = 0;
+            gSystemTickCount++;
+            Ps2TimeCount++;
+            if (GetBatteryVoltage() < 6400) // ¿¿6.4V¿¿
+            {
+                timeBattery++;
+                if (timeBattery > 5000) // ¿¿5¿
+                {
+                    BuzzerState = 1;
+                }
+            } else {
+                timeBattery = 0;
+                if (manual == FALSE) {
+                    BuzzerState = 0;
+                }
+            }
+        }
+    }
 }
 
 void TaskTimeHandle(void)
 {
-	static uint32 time = 10;
-	static uint32 times = 0;
-	if(gSystemTickCount > time)
-	{
-		time += 10;
-		times++;
-		if(times % 2 == 0)//20ms
-		{
-			ServoPwmDutyCompare();
-		}
-		if(times % 50 == 0)//500ms
-		{
-			CheckBatteryVoltage();
-		}
-	}
-	
+    static uint32 time = 10;
+    static uint32 times = 0;
+    if (gSystemTickCount > time) {
+        time += 10;
+        times++;
+        if (times % 2 == 0) // 20ms
+        {
+            ServoPwmDutyCompare();
+        }
+        if (times % 50 == 0) // 500ms
+        {
+            CheckBatteryVoltage();
+        }
+    }
 }
 
-int16 BusServoPwmDutySet[8] = {500,500,500,500,500,500,500,500};
+int16 BusServoPwmDutySet[8] = { 500, 500, 500, 500, 500, 500, 500, 500 };
 uint8 i;
 void TaskRun(u8 ps2_ok)
 {
-	static bool Ps2State = FALSE;
-	static uint8 mode = 0;
-	uint16 ly, rx,ry;
-	uint8 PS2KeyValue;
-	static uint8 keycount = 0;
-	TaskTimeHandle();
-	
-	
-	TaskPCMsgHandle();
-	TaskBLEMsgHandle();
-	TaskRobotRun();
+    static bool Ps2State = FALSE;
+    static uint8 mode = 0;
+    uint16 ly, rx, ry;
+    uint8 PS2KeyValue;
+    static uint8 keycount = 0;
+    TaskTimeHandle();
 
-	if(KEY == 0)
-	{
-		DelayMs(60);
-		{
-			if(KEY == 0)
-			{
-				keycount++;
-			}
-			else
-			{
-				if (keycount > 20)
-				{
-					keycount = 0;
-					FullActRun(100,0);
-					return;
-				}
-				else
-				{
-					keycount = 0;
-					LED = ~LED;
-					FullActRun(100,1);	
-				}
-			}
-		}
-	}
-	if (ps2_ok == 0)
-	{
-		if(Ps2TimeCount > 50)
-		{
-			Ps2TimeCount = 0;
-			PS2KeyValue = PS2_DataKey();
-			if(mode == 0)
-			{
-				if( PS2_Button( PSB_SELECT ) & PS2_ButtonPressed( PSB_START ) )
-				{
-					FullActStop();  //Í£Ö¹¶¯×÷×éÔËÐÐ
-					ServoSetPluseAndTime( 1, 1500, 1000 );  //½«»úÐµ±ÛµÄ¶æ»ú¶¼×ªµ½1500µÄÎ»ÖÃ
-					ServoSetPluseAndTime( 2, 1500, 1000 );
-					ServoSetPluseAndTime( 3, 1500, 1000 );
-					ServoSetPluseAndTime( 4, 1500, 1000 );
-					ServoSetPluseAndTime( 5, 1500, 1000 );
-					ServoSetPluseAndTime( 6, 1500, 1000 );
-					for (i = 1; i < 7; i++)
-					{
-						BusServoPwmDutySet[i] = 500;
-						BusServoCtrl(i,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[i],1000);
-					}
-					mode = 1;
-					Ps2State = 1;
-					manual = TRUE;
-					BuzzerState = 1;
-					LED=~LED;
-					DelayMs(80);
-					manual = FALSE;
-					DelayMs(50);
-					manual = TRUE;
-					BuzzerState = 1;
-					DelayMs(80);
-					manual = FALSE;
-					LED=~LED;
-				}
-				else
-				{
-					if(PS2KeyValue && !PS2_Button(PSB_SELECT))
-				{
-					LED=~LED;
-				}
-							
-					switch( PS2KeyValue )
-							{
-								//¸ù¾Ý°´ÏÂµÄ°´¼ü£¬¿ØÖÆ¶æ»ú×ª¶¯
-								case PSB_PAD_LEFT:
-									ServoSetPluseAndTime( 6, ServoPwmDutySet[6] + 20, 50 );
-									BusServoPwmDutySet[6] = BusServoPwmDutySet[6] + 10;
-									if (BusServoPwmDutySet[6] > 1000)
-										BusServoPwmDutySet[6] = 1000;
-									BusServoCtrl(6,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[6],50);
-									break;
-								case PSB_PAD_RIGHT:
-									ServoSetPluseAndTime( 6, ServoPwmDutySet[6] - 20, 50 );
-									BusServoPwmDutySet[6] = BusServoPwmDutySet[6] - 10;
-									if (BusServoPwmDutySet[6] < 0)
-										BusServoPwmDutySet[6] = 0;
-									BusServoCtrl(6,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[6],50);
-									break;
-								case PSB_PAD_UP:
-									ServoSetPluseAndTime( 5, ServoPwmDutySet[5] + 20, 50 );
-									BusServoPwmDutySet[5] = BusServoPwmDutySet[5] - 10;
-									if (BusServoPwmDutySet[5] < 0)
-										BusServoPwmDutySet[5] = 0;
-									BusServoCtrl(5,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[5],50);
-									break;
-								case PSB_PAD_DOWN:
-									ServoSetPluseAndTime( 5, ServoPwmDutySet[5] - 20, 50 );
-									BusServoPwmDutySet[5] = BusServoPwmDutySet[5] + 10;
-									if (BusServoPwmDutySet[5] > 1000)
-										BusServoPwmDutySet[5] = 1000;
-									BusServoCtrl(5,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[5],50);
-									break;
-								case PSB_L1:
-									ServoSetPluseAndTime( 2, ServoPwmDutySet[2] + 20, 50 );
-									BusServoPwmDutySet[2] = BusServoPwmDutySet[2] + 10;
-									if (BusServoPwmDutySet[2] > 1000)
-										BusServoPwmDutySet[2] = 1000;
-									BusServoCtrl(2,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[2],50);
-									break;
-								case PSB_L2:
-									ServoSetPluseAndTime( 1, ServoPwmDutySet[1] + 20, 50 );
-									BusServoPwmDutySet[1] = BusServoPwmDutySet[1] + 10;
-									if (BusServoPwmDutySet[1] > 1000)
-										BusServoPwmDutySet[1] = 1000;
-									BusServoCtrl(1,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[1],50);
-									break;
-								case PSB_TRIANGLE:
-									ServoSetPluseAndTime( 4, ServoPwmDutySet[4] - 20, 50 );
-									BusServoPwmDutySet[4] = BusServoPwmDutySet[4] + 10;
-									if (BusServoPwmDutySet[4] > 1000)
-										BusServoPwmDutySet[4] = 1000;
-									BusServoCtrl(4,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[4],50);
-									break;
-								case PSB_CROSS:
-									ServoSetPluseAndTime( 4, ServoPwmDutySet[4] + 20, 50 );
-									BusServoPwmDutySet[4] = BusServoPwmDutySet[4] - 10;
-									if (BusServoPwmDutySet[4] < 0)
-										BusServoPwmDutySet[4] = 0;
-									BusServoCtrl(4,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[4],50);
-									break;
-								case PSB_R1:
-									ServoSetPluseAndTime( 2, ServoPwmDutySet[2] - 20, 50 );
-									BusServoPwmDutySet[2] = BusServoPwmDutySet[2] - 10;
-									if (BusServoPwmDutySet[2] < 0)
-										BusServoPwmDutySet[2] = 0;
-									BusServoCtrl(2,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[2],50);
-									break;
-								case PSB_R2:
-									ServoSetPluseAndTime( 1, ServoPwmDutySet[1] - 20, 50 );
-									BusServoPwmDutySet[1] = BusServoPwmDutySet[1] - 10;
-									if (BusServoPwmDutySet[1] < 0)
-										BusServoPwmDutySet[1] = 0;
-									BusServoCtrl(1,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[1],50);
-									break;
-								case PSB_CIRCLE:
-									ServoSetPluseAndTime( 3, ServoPwmDutySet[3] + 20, 50 );
-									BusServoPwmDutySet[3] = BusServoPwmDutySet[3] + 10;
-									if (BusServoPwmDutySet[3] > 1000)
-										BusServoPwmDutySet[3] = 1000;
-									BusServoCtrl(3,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[3],50);
-									break;
-								case PSB_SQUARE:
-									ServoSetPluseAndTime( 3, ServoPwmDutySet[3] - 20, 50 );
-									BusServoPwmDutySet[3] = BusServoPwmDutySet[3] - 10;
-									if (BusServoPwmDutySet[3] < 0)
-										BusServoPwmDutySet[3] = 0;
-									BusServoCtrl(3,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[3],50);
-									break;
-								case PSB_START:
-									ServoSetPluseAndTime( 1, 1500, 1000 );
-									ServoSetPluseAndTime( 2, 1500, 1000 );
-									ServoSetPluseAndTime( 3, 1500, 1000 );
-									ServoSetPluseAndTime( 4, 1500, 1000 );
-									ServoSetPluseAndTime( 5, 1500, 1000 );
-									ServoSetPluseAndTime( 6, 1500, 1000 );
-									for (i = 1; i < 7; i++)
-									{
-										BusServoPwmDutySet[i] = 500;
-										BusServoCtrl(i,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[i],1000);
-									}
-									break;
-								default:
-									if (PS2_AnologData(PSS_LX) == 255)
-									{
-										ServoSetPluseAndTime( 3, ServoPwmDutySet[3] + 30, 60 );
-										BusServoPwmDutySet[3] = BusServoPwmDutySet[3] + 10;
-										if (BusServoPwmDutySet[3] > 1000)
-											BusServoPwmDutySet[3] = 1000;
-										BusServoCtrl(3,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[3],50);
-									}
-									if (PS2_AnologData(PSS_LX) == 0)
-									{
-										ServoSetPluseAndTime( 3, ServoPwmDutySet[3] - 30, 60 );
-										BusServoPwmDutySet[3] = BusServoPwmDutySet[3] - 10;
-										if (BusServoPwmDutySet[3] < 0)
-											BusServoPwmDutySet[3] = 0;
-										BusServoCtrl(3,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[3],50);
-									}
-									if (PS2_AnologData(PSS_RY) == 0)
-									{
-										LED=~LED;
-										ServoSetPluseAndTime( 4, ServoPwmDutySet[4] + 30, 60 );
-										BusServoPwmDutySet[4] = BusServoPwmDutySet[4] + 10;
-										if (BusServoPwmDutySet[4] > 1000)
-											BusServoPwmDutySet[4] = 1000;
-										BusServoCtrl(4,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[4],50);
-									}
-									if (PS2_AnologData(PSS_RY) == 255)
-									{
-										LED=~LED;
-										ServoSetPluseAndTime( 4, ServoPwmDutySet[4] - 30, 60 );
-										BusServoPwmDutySet[4] = BusServoPwmDutySet[4] - 10;
-										if (BusServoPwmDutySet[4] < 0)
-											BusServoPwmDutySet[4] = 0;
-										BusServoCtrl(4,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[4],50);
-									}
-									if (PS2_AnologData(PSS_LY) == 0)
-									{
-										ServoSetPluseAndTime( 5, ServoPwmDutySet[5] - 30, 60 );
-										BusServoPwmDutySet[5] = BusServoPwmDutySet[5] - 10;
-										if (BusServoPwmDutySet[5] < 0)
-											BusServoPwmDutySet[5] = 0;
-										BusServoCtrl(5,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[5],50);
-									}
-									if (PS2_AnologData(PSS_LY) == 255)
-									{
-										ServoSetPluseAndTime( 5, ServoPwmDutySet[5] + 30, 60 );
-										BusServoPwmDutySet[5] = BusServoPwmDutySet[5] + 10;
-										if (BusServoPwmDutySet[5] > 1000)
-											BusServoPwmDutySet[5] = 1000;
-										BusServoCtrl(5,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[5],50);	
-									}
-									if (PS2_AnologData(PSS_RX) == 0)
-									{
-										ServoSetPluseAndTime( 6, ServoPwmDutySet[6] + 30, 60 );
-										BusServoPwmDutySet[6] = BusServoPwmDutySet[6] + 10;
-										if (BusServoPwmDutySet[6] > 1000)
-											BusServoPwmDutySet[6] = 1000;
-										BusServoCtrl(6,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[6],50);
-									}
-									if (PS2_AnologData(PSS_RX) == 255)
-									{
-										ServoSetPluseAndTime( 6, ServoPwmDutySet[6] - 30, 60 );
-										BusServoPwmDutySet[6] = BusServoPwmDutySet[6] - 10;
-										if (BusServoPwmDutySet[6] < 0)
-											BusServoPwmDutySet[6] = 0;
-										BusServoCtrl(6,SERVO_MOVE_TIME_WRITE,BusServoPwmDutySet[6],50);
-									}
-								}
-				}
-			}
-			else
-			{	
-				 if( PS2_Button( PSB_SELECT ) && PS2_ButtonPressed( PSB_START ) )  //¼ì²éÊÇ²»ÊÇ SELECT°´Å¥±»°´×¡£¬È»ºó°´ÏÂSTART°´Å¥£¬ ÊÇµÄ»°£¬ÇÐ»»Ä£Ê½
-					{
-						mode = 0; //½«Ä£Ê½±äÎª0£¬ ¾Í¶¯×÷×éÄ£Ê½
-						Ps2State = 0;  //Çå³ý±êÖ¾¡£
-						manual = TRUE;
-						BuzzerState = 1;
-						LED=~LED;
-						DelayMs(80);
-						manual = FALSE;
-						DelayMs(50);
-						manual = TRUE;
-						BuzzerState = 1;
-						DelayMs(80);
-						manual = FALSE;
-						LED=~LED;
-					}
-					else
-					{
-				if(PS2KeyValue && !Ps2State && !PS2_Button(PSB_SELECT))
-				{
-					LED=~LED;
-				}
+    TaskPCMsgHandle();
+    TaskBLEMsgHandle();
+    TaskRobotRun();
 
-				switch(PS2KeyValue)
-				{
-					case 0:
-						if(Ps2State)
-						{
-							Ps2State = FALSE;
-						}
-						break;
-					
-					case PSB_START:
-						if(!Ps2State)
-						{
-							FullActRun(0,1);
-						}
-						Ps2State = TRUE;
-						break;
-					
-					case PSB_PAD_UP:
-						if(!Ps2State)
-						{
-							FullActRun(1,1);
-						}
-						Ps2State = TRUE;
-						break;
-					
-					case PSB_PAD_DOWN:
-						if(!Ps2State)
-						{
-							FullActRun(2,1);
-						}
-						Ps2State = TRUE;
-						break;
-					
-					case PSB_PAD_LEFT:
-						if(!Ps2State)
-						{
-						FullActRun(3,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_PAD_RIGHT:
-					if(!Ps2State)
-					{
-						FullActRun(4,1);
-					}
-					Ps2State = TRUE;
-					break;
+    if (KEY == 0) {
+        DelayMs(60);
+        {
+            if (KEY == 0) {
+                keycount++;
+            } else {
+                if (keycount > 20) {
+                    keycount = 0;
+                    FullActRun(100, 0);
+                    return;
+                } else {
+                    keycount = 0;
+                    LED = ~LED;
+                    FullActRun(100, 1);
+                }
+            }
+        }
+    }
+    if (ps2_ok == 0) {
+        if (Ps2TimeCount > 50) {
+            Ps2TimeCount = 0;
+            PS2KeyValue = PS2_DataKey();
+            if (mode == 0) {
+                if (PS2_Button(PSB_SELECT) & PS2_ButtonPressed(PSB_START)) {
+                    FullActStop();                       // ¿¿¿¿¿¿¿
+                    ServoSetPluseAndTime(1, 1500, 1000); // ¿¿¿¿¿¿¿¿¿¿1500¿¿¿
+                    ServoSetPluseAndTime(2, 1500, 1000);
+                    ServoSetPluseAndTime(3, 1500, 1000);
+                    ServoSetPluseAndTime(4, 1500, 1000);
+                    ServoSetPluseAndTime(5, 1500, 1000);
+                    ServoSetPluseAndTime(6, 1500, 1000);
+                    for (i = 1; i < 7; i++) {
+                        BusServoPwmDutySet[i] = 500;
+                        BusServoCtrl(i, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[i], 1000);
+                    }
+                    mode = 1;
+                    Ps2State = 1;
+                    manual = TRUE;
+                    BuzzerState = 1;
+                    LED = ~LED;
+                    DelayMs(80);
+                    manual = FALSE;
+                    DelayMs(50);
+                    manual = TRUE;
+                    BuzzerState = 1;
+                    DelayMs(80);
+                    manual = FALSE;
+                    LED = ~LED;
+                } else {
+                    if (PS2KeyValue && !PS2_Button(PSB_SELECT)) {
+                        LED = ~LED;
+                    }
 
-				case PSB_TRIANGLE:
-					if(!Ps2State)
-					{
-						FullActRun(5,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_CROSS:
-					if(!Ps2State)
-					{
-						FullActRun(6,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_SQUARE:
-					if(!Ps2State)
-					{
-						FullActRun(7,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_CIRCLE:
-					if(!Ps2State)
-					{
-						FullActRun(8,1);
-					}
-					Ps2State = TRUE;
-					break;
+                    switch (PS2KeyValue) {
+                    // ¿¿¿¿¿¿¿¿¿¿¿¿¿¿
+                    case PSB_PAD_LEFT:
+                        ServoSetPluseAndTime(6, ServoPwmDutySet[6] + 20, 50);
+                        BusServoPwmDutySet[6] = BusServoPwmDutySet[6] + 10;
+                        if (BusServoPwmDutySet[6] > 1000)
+                            BusServoPwmDutySet[6] = 1000;
+                        BusServoCtrl(6, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[6], 50);
+                        break;
+                    case PSB_PAD_RIGHT:
+                        ServoSetPluseAndTime(6, ServoPwmDutySet[6] - 20, 50);
+                        BusServoPwmDutySet[6] = BusServoPwmDutySet[6] - 10;
+                        if (BusServoPwmDutySet[6] < 0)
+                            BusServoPwmDutySet[6] = 0;
+                        BusServoCtrl(6, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[6], 50);
+                        break;
+                    case PSB_PAD_UP:
+                        ServoSetPluseAndTime(5, ServoPwmDutySet[5] + 20, 50);
+                        BusServoPwmDutySet[5] = BusServoPwmDutySet[5] - 10;
+                        if (BusServoPwmDutySet[5] < 0)
+                            BusServoPwmDutySet[5] = 0;
+                        BusServoCtrl(5, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[5], 50);
+                        break;
+                    case PSB_PAD_DOWN:
+                        ServoSetPluseAndTime(5, ServoPwmDutySet[5] - 20, 50);
+                        BusServoPwmDutySet[5] = BusServoPwmDutySet[5] + 10;
+                        if (BusServoPwmDutySet[5] > 1000)
+                            BusServoPwmDutySet[5] = 1000;
+                        BusServoCtrl(5, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[5], 50);
+                        break;
+                    case PSB_L1:
+                        ServoSetPluseAndTime(2, ServoPwmDutySet[2] + 20, 50);
+                        BusServoPwmDutySet[2] = BusServoPwmDutySet[2] + 10;
+                        if (BusServoPwmDutySet[2] > 1000)
+                            BusServoPwmDutySet[2] = 1000;
+                        BusServoCtrl(2, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[2], 50);
+                        break;
+                    case PSB_L2:
+                        ServoSetPluseAndTime(1, ServoPwmDutySet[1] + 20, 50);
+                        BusServoPwmDutySet[1] = BusServoPwmDutySet[1] + 10;
+                        if (BusServoPwmDutySet[1] > 1000)
+                            BusServoPwmDutySet[1] = 1000;
+                        BusServoCtrl(1, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[1], 50);
+                        break;
+                    case PSB_TRIANGLE:
+                        ServoSetPluseAndTime(4, ServoPwmDutySet[4] - 20, 50);
+                        BusServoPwmDutySet[4] = BusServoPwmDutySet[4] + 10;
+                        if (BusServoPwmDutySet[4] > 1000)
+                            BusServoPwmDutySet[4] = 1000;
+                        BusServoCtrl(4, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[4], 50);
+                        break;
+                    case PSB_CROSS:
+                        ServoSetPluseAndTime(4, ServoPwmDutySet[4] + 20, 50);
+                        BusServoPwmDutySet[4] = BusServoPwmDutySet[4] - 10;
+                        if (BusServoPwmDutySet[4] < 0)
+                            BusServoPwmDutySet[4] = 0;
+                        BusServoCtrl(4, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[4], 50);
+                        break;
+                    case PSB_R1:
+                        ServoSetPluseAndTime(2, ServoPwmDutySet[2] - 20, 50);
+                        BusServoPwmDutySet[2] = BusServoPwmDutySet[2] - 10;
+                        if (BusServoPwmDutySet[2] < 0)
+                            BusServoPwmDutySet[2] = 0;
+                        BusServoCtrl(2, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[2], 50);
+                        break;
+                    case PSB_R2:
+                        ServoSetPluseAndTime(1, ServoPwmDutySet[1] - 20, 50);
+                        BusServoPwmDutySet[1] = BusServoPwmDutySet[1] - 10;
+                        if (BusServoPwmDutySet[1] < 0)
+                            BusServoPwmDutySet[1] = 0;
+                        BusServoCtrl(1, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[1], 50);
+                        break;
+                    case PSB_CIRCLE:
+                        ServoSetPluseAndTime(3, ServoPwmDutySet[3] + 20, 50);
+                        BusServoPwmDutySet[3] = BusServoPwmDutySet[3] + 10;
+                        if (BusServoPwmDutySet[3] > 1000)
+                            BusServoPwmDutySet[3] = 1000;
+                        BusServoCtrl(3, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[3], 50);
+                        break;
+                    case PSB_SQUARE:
+                        ServoSetPluseAndTime(3, ServoPwmDutySet[3] - 20, 50);
+                        BusServoPwmDutySet[3] = BusServoPwmDutySet[3] - 10;
+                        if (BusServoPwmDutySet[3] < 0)
+                            BusServoPwmDutySet[3] = 0;
+                        BusServoCtrl(3, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[3], 50);
+                        break;
+                    case PSB_START:
+                        ServoSetPluseAndTime(1, 1500, 1000);
+                        ServoSetPluseAndTime(2, 1500, 1000);
+                        ServoSetPluseAndTime(3, 1500, 1000);
+                        ServoSetPluseAndTime(4, 1500, 1000);
+                        ServoSetPluseAndTime(5, 1500, 1000);
+                        ServoSetPluseAndTime(6, 1500, 1000);
+                        for (i = 1; i < 7; i++) {
+                            BusServoPwmDutySet[i] = 500;
+                            BusServoCtrl(i, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[i], 1000);
+                        }
+                        break;
+                    default:
+                        if (PS2_AnologData(PSS_LX) == 255) {
+                            ServoSetPluseAndTime(3, ServoPwmDutySet[3] + 30, 60);
+                            BusServoPwmDutySet[3] = BusServoPwmDutySet[3] + 10;
+                            if (BusServoPwmDutySet[3] > 1000)
+                                BusServoPwmDutySet[3] = 1000;
+                            BusServoCtrl(3, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[3], 50);
+                        }
+                        if (PS2_AnologData(PSS_LX) == 0) {
+                            ServoSetPluseAndTime(3, ServoPwmDutySet[3] - 30, 60);
+                            BusServoPwmDutySet[3] = BusServoPwmDutySet[3] - 10;
+                            if (BusServoPwmDutySet[3] < 0)
+                                BusServoPwmDutySet[3] = 0;
+                            BusServoCtrl(3, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[3], 50);
+                        }
+                        if (PS2_AnologData(PSS_RY) == 0) {
+                            LED = ~LED;
+                            ServoSetPluseAndTime(4, ServoPwmDutySet[4] + 30, 60);
+                            BusServoPwmDutySet[4] = BusServoPwmDutySet[4] + 10;
+                            if (BusServoPwmDutySet[4] > 1000)
+                                BusServoPwmDutySet[4] = 1000;
+                            BusServoCtrl(4, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[4], 50);
+                        }
+                        if (PS2_AnologData(PSS_RY) == 255) {
+                            LED = ~LED;
+                            ServoSetPluseAndTime(4, ServoPwmDutySet[4] - 30, 60);
+                            BusServoPwmDutySet[4] = BusServoPwmDutySet[4] - 10;
+                            if (BusServoPwmDutySet[4] < 0)
+                                BusServoPwmDutySet[4] = 0;
+                            BusServoCtrl(4, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[4], 50);
+                        }
+                        if (PS2_AnologData(PSS_LY) == 0) {
+                            ServoSetPluseAndTime(5, ServoPwmDutySet[5] - 30, 60);
+                            BusServoPwmDutySet[5] = BusServoPwmDutySet[5] - 10;
+                            if (BusServoPwmDutySet[5] < 0)
+                                BusServoPwmDutySet[5] = 0;
+                            BusServoCtrl(5, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[5], 50);
+                        }
+                        if (PS2_AnologData(PSS_LY) == 255) {
+                            ServoSetPluseAndTime(5, ServoPwmDutySet[5] + 30, 60);
+                            BusServoPwmDutySet[5] = BusServoPwmDutySet[5] + 10;
+                            if (BusServoPwmDutySet[5] > 1000)
+                                BusServoPwmDutySet[5] = 1000;
+                            BusServoCtrl(5, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[5], 50);
+                        }
+                        if (PS2_AnologData(PSS_RX) == 0) {
+                            ServoSetPluseAndTime(6, ServoPwmDutySet[6] + 30, 60);
+                            BusServoPwmDutySet[6] = BusServoPwmDutySet[6] + 10;
+                            if (BusServoPwmDutySet[6] > 1000)
+                                BusServoPwmDutySet[6] = 1000;
+                            BusServoCtrl(6, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[6], 50);
+                        }
+                        if (PS2_AnologData(PSS_RX) == 255) {
+                            ServoSetPluseAndTime(6, ServoPwmDutySet[6] - 30, 60);
+                            BusServoPwmDutySet[6] = BusServoPwmDutySet[6] - 10;
+                            if (BusServoPwmDutySet[6] < 0)
+                                BusServoPwmDutySet[6] = 0;
+                            BusServoCtrl(6, SERVO_MOVE_TIME_WRITE, BusServoPwmDutySet[6], 50);
+                        }
+                    }
+                }
+            } else {
+                if (PS2_Button(PSB_SELECT) && PS2_ButtonPressed(PSB_START)) // ¿¿¿¿¿ SELECT¿¿¿¿¿¿¿¿¿¿START¿¿¿ ¿¿¿¿¿¿¿¿
+                {
+                    mode = 0;     // ¿¿¿¿¿0¿ ¿¿¿¿¿¿
+                    Ps2State = 0; // ¿¿¿¿¿
+                    manual = TRUE;
+                    BuzzerState = 1;
+                    LED = ~LED;
+                    DelayMs(80);
+                    manual = FALSE;
+                    DelayMs(50);
+                    manual = TRUE;
+                    BuzzerState = 1;
+                    DelayMs(80);
+                    manual = FALSE;
+                    LED = ~LED;
+                } else {
+                    if (PS2KeyValue && !Ps2State && !PS2_Button(PSB_SELECT)) {
+                        LED = ~LED;
+                    }
 
-				case PSB_L1:
-					if(!Ps2State)
-					{
-						FullActRun(9,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_R1:
-					if(!Ps2State)
-					{
-						FullActRun(10,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_L2:
-					if(!Ps2State)
-					{
-						FullActRun(11,1);
-					}
-					Ps2State = TRUE;
-					break;
-					
-				case PSB_R2:
-					if(!Ps2State)
-					{
-						FullActRun(12,1);
-					}
-					Ps2State = TRUE;
-					break;
-			}
-		}
-		}
-	}
-}
+                    switch (PS2KeyValue) {
+                    case 0:
+                        if (Ps2State) {
+                            Ps2State = FALSE;
+                        }
+                        break;
+
+                    case PSB_START:
+                        if (!Ps2State) {
+                            FullActRun(0, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_PAD_UP:
+                        if (!Ps2State) {
+                            FullActRun(1, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_PAD_DOWN:
+                        if (!Ps2State) {
+                            FullActRun(2, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_PAD_LEFT:
+                        if (!Ps2State) {
+                            FullActRun(3, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_PAD_RIGHT:
+                        if (!Ps2State) {
+                            FullActRun(4, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_TRIANGLE:
+                        if (!Ps2State) {
+                            FullActRun(5, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_CROSS:
+                        if (!Ps2State) {
+                            FullActRun(6, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_SQUARE:
+                        if (!Ps2State) {
+                            FullActRun(7, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_CIRCLE:
+                        if (!Ps2State) {
+                            FullActRun(8, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_L1:
+                        if (!Ps2State) {
+                            FullActRun(9, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_R1:
+                        if (!Ps2State) {
+                            FullActRun(10, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_L2:
+                        if (!Ps2State) {
+                            FullActRun(11, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+
+                    case PSB_R2:
+                        if (!Ps2State) {
+                            FullActRun(12, 1);
+                        }
+                        Ps2State = TRUE;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
