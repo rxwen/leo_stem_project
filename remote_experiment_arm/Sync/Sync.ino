@@ -54,16 +54,10 @@ void setup() {
     delay(100);
     Bth.print("AT+RESET");  //软重启蓝牙模块
     delay(250);
-
     //  sync.setSyncID(6);//设置模块ID，群发设置，请一次只连接一个模块。
-
-
-
-
     pinMode(LED,OUTPUT);
     pinMode(KEY1, INPUT_PULLUP);
     pinMode(KEY2, INPUT_PULLUP);
-
 }
 
 void loop() {
